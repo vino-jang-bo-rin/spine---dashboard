@@ -47,10 +47,10 @@
 <script>
 /* ---------- FIREBASE CONFIG (REPLACE WITH YOURS) ---------- */
 var firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "your-project-id.firebaseapp.com",
-  databaseURL: "https://your-project-id.firebaseio.com",
-  projectId: "your-project-id"
+  apiKey: "AIzaSyCrXbcBhgJYMHlIl_XTO-oQbY9OEL1VPMQ",
+  authDomain: "scoliosis-dashboard.firebaseapp.com",,
+  databaseURL: "https://scoliosis-dashboard-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "scoliosis-dashboard"
 };
 firebase.initializeApp(firebaseConfig);
 var database = firebase.database();
@@ -127,4 +127,5 @@ database.ref("spine").on("value", snapshot => {
 </script>
 
 </body>
+
 </html>
