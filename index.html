@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Scoliosis Monitoring Dashboard</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Three.js -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+
+  <style>
+    body { font-family: Arial; background: #f4f6f8; }
+    h2 { text-align: center; }
+    .container { display: flex; }
+    .left, .right { width: 50%; padding: 20px; }
+    canvas { background: #fff; }
+    .value { font-size: 18px; margin: 8px 0; }
+    .alert { font-weight: bold; color: red; }
+  </style>
+</head>
+
+<body>
+
+<h2>Digital Twin – Scoliosis Posture Monitoring</h2>
+
+<div class="container">
+  <div class="left">
+    <canvas id="angleChart"></canvas>
+
+    <div class="value">Upper Angle: <span id="upper">0</span>°</div>
+    <div class="value">Lower Angle: <span id="lower">0</span>°</div>
+    <div class="value">Cobb Angle: <span id="cobb">0</span>°</div>
+    <div class="value">Severity: <span id="severity">Normal</span></div>
+    <div class="value alert">Instruction: <span id="instruction">---</span></div>
+  </div>
+
+  <div class="right">
+    <div id="spine3d"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- FIREBASE CONFIG (REPLACE WITH YOURS) ---------- */
+var firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "your-project-id.firebaseapp.com",
+  databaseURL: "https://your-project-id.firebaseio.com",
+  projectId: "your-project-id"
+};
+firebase.initializeApp(firebaseConfig);
+var database = firebase.database();
+
+/* ---------------- CHART ---------------- */
+const ctx = document.getElementById('angleChart').getContext('2d');
+const chart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [
+      { label: 'Upper Pitch', data: [], borderColor: 'blue', fill: false },
+      { label: 'Lower Pitch', data: [], borderColor: 'green', fill: false },
+      { label: 'Cobb Angle', data: [], borderColor: 'red', borderDash: [5,5], fill: false }
+    ]
+  },
+  options: { responsive: true, animation: false, scales: { y: { min: 0, max: 60 } } }
+});
+
+/* ---------------- 3D SPINE ---------------- */
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(300, 300);
+document.getElementById("spine3d").appendChild(renderer.domElement);
+
+const spine = new THREE.Mesh(
+  new THREE.BoxGeometry(0.3, 2, 0.3),
+  new THREE.MeshBasicMaterial({ color: 0x0077ff })
+);
+scene.add(spine);
+camera.position.z = 4;
+
+function animate() {
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+animate();
+
+/* ---------- LOGIC ---------- */
+function getSeverity(cobb) {
+  if (cobb < 10) return ["Normal", "Maintain posture"];
+  if (cobb < 25) return ["Mild", "Stretching exercises daily"];
+  if (cobb < 40) return ["Moderate", "Physiotherapy recommended"];
+  return ["Severe", "Immediate doctor consultation"];
+}
+
+/* ---------------- FIREBASE LISTENER ---------------- */
+database.ref("spine").on("value", snapshot => {
+  const d = snapshot.val();
+  if (!d) return;
+
+  upper.innerText = d.upperPitch.toFixed(1);
+  lower.innerText = d.lowerPitch.toFixed(1);
+  cobb.innerText = d.cobbAngle.toFixed(1);
+
+  const [sev, inst] = getSeverity(d.cobbAngle);
+  severity.innerText = sev;
+  instruction.innerText = inst;
+
+  chart.data.labels.push("");
+  chart.data.datasets[0].data.push(d.upperPitch);
+  chart.data.datasets[1].data.push(d.lowerPitch);
+  chart.data.datasets[2].data.push(d.cobbAngle);
+
+  if (chart.data.labels.length > 20) {
+    chart.data.labels.shift();
+    chart.data.datasets.forEach(ds => ds.data.shift());
+  }
+  chart.update();
+
+  spine.rotation.z = THREE.MathUtils.degToRad(d.cobbAngle / 4);
+});
+</script>
+
+</body>
+</html>
